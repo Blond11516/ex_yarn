@@ -8,7 +8,20 @@ defmodule ExYarn.MixProject do
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      description: description(),
+      package: package()
+    ]
+  end
+
+  defp description, do: "A parser for yarn lockfiles"
+
+  defp package do
+    [
+      files: ["lib", "mix.exs", "README.md", "LICENSE"],
+      maintainers: ["Étienne Lévesque"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/Blond11516/ex_yarn", "Docs" => "https://hexdocs.pm/ex_yarn/"}
     ]
   end
 
