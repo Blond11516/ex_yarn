@@ -8,7 +8,21 @@ defmodule ExYarn.MixProject do
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      description: description(),
+      package: package(),
+      source_url: "https://github.com/Blond11516/ex_yarn"
+    ]
+  end
+
+  defp description, do: "A parser for yarn lockfiles"
+
+  defp package do
+    [
+      files: ["lib", "mix.exs", "README.md", "LICENSE"],
+      maintainers: ["Étienne Lévesque"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/Blond11516/ex_yarn"}
     ]
   end
 
@@ -25,8 +39,9 @@ defmodule ExYarn.MixProject do
       {:yaml_elixir, "~> 2.5"},
 
       # Dev dependencies
-      {:dialyxir, "~> 1.0", only: :dev},
-      {:credo, "~> 1.4", only: :dev}
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+      {:credo, "~> 1.4", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.22.2", only: :dev, runtime: false}
     ]
   end
 
