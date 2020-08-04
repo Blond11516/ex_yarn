@@ -10,7 +10,8 @@ defmodule ExYarn.MixProject do
       deps: deps(),
       aliases: aliases(),
       description: description(),
-      package: package()
+      package: package(),
+      source_url: "https://github.com/Blond11516/ex_yarn"
     ]
   end
 
