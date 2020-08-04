@@ -21,7 +21,7 @@ defmodule ExYarn.MixProject do
       files: ["lib", "mix.exs", "README.md", "LICENSE"],
       maintainers: ["Étienne Lévesque"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/Blond11516/ex_yarn", "Docs" => "https://hexdocs.pm/ex_yarn/"}
+      links: %{"GitHub" => "https://github.com/Blond11516/ex_yarn"}
     ]
   end
 
