@@ -25,3 +25,6 @@ ex_yarn-*.tar
 # Test file
 yarn.lock
 
+# IDEs
+.vscode
+
