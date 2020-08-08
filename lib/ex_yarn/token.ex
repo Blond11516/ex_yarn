@@ -138,11 +138,11 @@ defmodule ExYarn.Token do
   end
 
   defp generate_next_token("true" <> _rest, _last_new_line, line, col) do
-    {4, build_token(line, col, :boolean), line, col}
+    {4, build_token(line, col, :boolean, true), line, col}
   end
 
   defp generate_next_token("false" <> _rest, _last_new_line, line, col) do
-    {5, build_token(line, col, :boolean), line, col}
+    {5, build_token(line, col, :boolean, false), line, col}
   end
 
   defp generate_next_token(":" <> _rest, _last_new_line, line, col) do

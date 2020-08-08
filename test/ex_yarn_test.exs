@@ -165,8 +165,23 @@ defmodule ExYarnTest do
       bar foo
     """
 
-    {:ok, :success, result} = ExYarn.parse(input)
     expected_result = %{"foo" => %{"bar" => "foo"}}
+
+    {:ok, :success, result} = ExYarn.parse(input)
+
+    assert expected_result == result
+  end
+
+  test "parses booleans correctly" do
+    input = """
+    foo:
+      bar true
+      foo false
+    """
+
+    expected_result = %{"foo" => %{"bar" => true, "foo" => false}}
+
+    {:ok, :success, result} = ExYarn.parse(input)
     assert expected_result == result
   end
 end
