@@ -11,7 +11,7 @@ The package can be installed by adding `ex_yarn` to your list of dependencies in
 ```elixir
 def deps do
   [
-    {:ex_yarn, "~> 0.3.0"}
+    {:ex_yarn, "~> 0.3.1"}
   ]
 end
 ```
