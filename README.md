@@ -1,6 +1,6 @@
 # ExYarn
 
-This is a simple library for parsing [Yarn](https://classic.yarnpkg.com/en/) lockfiles. The current is currently a mostly direct port of Yarn's [own parser](https://github.com/yarnpkg/yarn/blob/master/src/lockfile/parse.js), so it's very imperative-like in many places. I do plan to improve this and make better use of Elixir and OTP's features and ecosystem in the future.
+This is a simple library for parsing [Yarn](https://classic.yarnpkg.com/en/) lockfiles. This is currently a mostly direct port of Yarn's [own parser](https://github.com/yarnpkg/yarn/blob/master/src/lockfile/parse.js), so it's very imperative-like in many places. I do plan to improve this and make better use of Elixir and OTP's features and ecosystem in the future.
 
 ## Installation
 
