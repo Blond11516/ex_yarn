@@ -11,7 +11,11 @@ defmodule ExYarn.MixProject do
       aliases: aliases(),
       description: description(),
       package: package(),
-      source_url: "https://github.com/Blond11516/ex_yarn"
+      source_url: "https://github.com/Blond11516/ex_yarn",
+      docs: [
+        main: "ExYarn",
+        extras: ["README.md"]
+      ]
     ]
   end
 

@@ -1,6 +1,25 @@
 defmodule ExYarn do
   @moduledoc """
-     Documentation for `ExYarn`.
+  The library's main module
+
+  This module should be used as the public entrypoint of the library. It exposes
+  a single function, `parse/2`, which is used to parse a lockfile's contents.
+
+  ## Example
+
+  Given the following `yarn.lock` file:
+  ```yaml
+  foo:
+    "bar" true
+    foo 10
+    foobar: barfoo
+
+  ```
+  The module should be used in the following manner:
+
+      iex> {:ok, input} = File.read("yarn.lock")
+      iex> ExYarn.parse(input, "yarn.lock")
+      {:ok, :success, %{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}}
   """
 
   alias ExYarn.{ParseError, Parser}
@@ -10,6 +29,16 @@ defmodule ExYarn do
   @merge_conflict_sep "======="
   @merge_conflict_start "<<<<<<<"
 
+  @typedoc """
+  The possible return values of `parse/2`
+
+  Types details:
+  - `{:ok, :merge, map()}`: The lockfile contained a merge conflict but was still successfully parsed
+  - `{:ok, :success, map()}`: The locfile was successfully parsed
+  - `{:error, _}`: There was an error while parsing the lockfile.
+  The second element indicates the type of error that occured
+  - `{:error, :conflict, FunctionClauseError}`: The lockfile contained a merge conflict which could not be parsed successfully.
+  """
   @type parseResult ::
           {:ok, :merge | :success, map()}
           | {:error, ParseError.t()}
@@ -17,6 +46,14 @@ defmodule ExYarn do
           | {:error, YamlElixir.ParsingError}
           | {:error, :conflict, FunctionClauseError}
 
+  @doc """
+  Receives the lockfile's contents, and optionnally the lockfile's name as inputs
+  and returns the parse result
+
+  The lockfile's name is used to determine whether to parse the lockfile as an
+  official yarn lockfile (i.e. with yarn's custom format) or as a regular YAML
+  file. The function defaults to parsing the file as a yarn lockfile.
+  """
   @spec parse(String.t(), String.t()) :: parseResult()
   def parse(str, file_loc \\ "lockfile") do
     str = String.replace_prefix(str, "\uFEFF", "")
@@ -75,7 +112,7 @@ defmodule ExYarn do
     if String.ends_with?(file_loc, ".yml") do
       parse_file_yaml(str)
     else
-      parse_file_yarn(str, file_loc)
+      parse_file_yarn(str)
     end
   end
 
@@ -86,8 +123,8 @@ defmodule ExYarn do
     end
   end
 
-  defp parse_file_yarn(str, file_loc) do
-    case Parser.parse(str, file_loc) do
+  defp parse_file_yarn(str) do
+    case Parser.parse(str) do
       {:error, error} ->
         case YamlElixir.read_from_string(str) do
           {:error, _} -> {:error, error}

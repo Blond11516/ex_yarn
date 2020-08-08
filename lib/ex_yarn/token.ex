@@ -1,8 +1,19 @@
 defmodule ExYarn.Token do
-  @moduledoc false
+  @moduledoc """
+  A token is the building block of a lockfile (intended for internal use only)
+
+  This module takes a lockfile's contents as input and breaks it up into a list
+  of tokens, each of them representing a single discrete element of the lockfile.
+
+  Tokens represent every piece that makes up a lockfile, from comments, strings
+  and integers to line returns, colons and indentation.
+  """
 
   alias ExYarn.ParseError
 
+  @typedoc """
+  The list of types a token can have
+  """
   @type tokenType ::
           :boolean
           | :string
@@ -21,6 +32,9 @@ defmodule ExYarn.Token do
   @enforce_keys [:type, :value, :line, :col]
   defstruct [:line, :col, :type, :value]
 
+  @typedoc """
+  A token represents a discrete piece of text making up a lockfile
+  """
   @type t() :: %__MODULE__{
           line: integer(),
           col: integer(),
@@ -28,11 +42,19 @@ defmodule ExYarn.Token do
           value: any()
         }
 
+  @doc """
+  Takes a `ExYarn.Token` as an input and returns a boolean indicating
+  whether or not it can be used as a value for a key
+  """
   @spec valid_prop_value?(t()) :: boolean
   def valid_prop_value?(%__MODULE__{type: type}) do
     type in @valid_prop_value_token
   end
 
+  @doc """
+  Main entrypoint for the module. Takes as input a `String` representing the
+  contents of a yarn lockfile and returns the corresponding list of tokens.
+  """
   @spec tokenize(String.t()) :: [t()] | {:error, ParseError.t()}
   def tokenize(input) do
     case tokenize(input, false, 1, 0, []) do

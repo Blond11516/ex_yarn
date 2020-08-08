@@ -1,31 +1,44 @@
 defmodule ExYarn.Parser do
-  @moduledoc false
+  @moduledoc """
+  Main module for parsing lockfiles (intended for internal use only)
+
+  This module receives the lockfile as input, passes it over to `ExYarn.Token`
+  for tokenization and parses the resulting token list to generate the map
+  reprsenting the lockfile's contents.
+  """
 
   alias ExYarn.{Token, ParseError}
 
   @version_regex ~r/^yarn lockfile v(\d+)$/
   @lockfile_version 1
 
-  @enforce_keys [:file_loc, :tokens]
-  defstruct [:file_loc, :tokens, comments: [], indent: 0, result: %{}]
+  @enforce_keys [:tokens]
+  defstruct [:tokens, comments: [], indent: 0, result: %{}]
 
+  @typedoc """
+  This type is meant for internal use only and reprsents the parser's state
+  """
   @type t() :: %__MODULE__{
-          file_loc: String.t(),
           tokens: [Token.t()],
           comments: [String.t()],
           indent: integer(),
           result: map()
         }
 
-  @spec parse(String.t(), String.t()) :: {:ok, map()} | {:error, ParseError.t()}
-  def parse(input, file_loc \\ "lockfile") do
+  @doc """
+  The module's entrypoint
+
+  Receives the lockfile's content as a `String` and returns the parsed map
+  representing the lockfile as a `Map`.
+  """
+  @spec parse(String.t()) :: {:ok, map()} | {:error, ParseError.t()}
+  def parse(input) do
     case Token.tokenize(input) do
       {:error, error} ->
         {:error, error}
 
       tokens ->
         parser = %__MODULE__{
-          file_loc: file_loc,
           tokens: tokens
         }
 
