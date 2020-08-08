@@ -69,7 +69,7 @@ defmodule ExYarn.Token do
 
         last_new_line = String.at(input, 0) == "\n" or String.at(input, 0) == "\r\n"
 
-        input = String.slice(input, chop, String.length(input))
+        input = String.slice(input, chop..-1)
 
         tokenize(input, last_new_line, line, col, tokens)
     end
