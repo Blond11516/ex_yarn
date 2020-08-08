@@ -95,15 +95,18 @@ defmodule ExYarn.Token do
   end
 
   defp generate_next_token("#" <> rest, _last_new_line, line, col) do
-    next_new_line =
-      case :binary.match(rest, "\n") do
-        {line, _} -> line
-        :nomatch -> String.length(rest)
+    {val, val_length} =
+      case Regex.run(~r/^.*?\n/, rest) do
+        [capture | _] ->
+          val_length = String.length(capture) - 1
+          val = String.slice(capture, 0, val_length)
+          {val, val_length}
+
+        nil ->
+          {rest, String.length(rest)}
       end
 
-    val = String.slice(rest, 0, next_new_line - 1)
-
-    {next_new_line - 1, build_token(line, col, :comment, val), line, col}
+    {val_length + 1, build_token(line, col, :comment, val), line, col}
   end
 
   defp generate_next_token(" " <> _rest, false, line, col) do

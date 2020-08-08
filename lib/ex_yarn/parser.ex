@@ -227,7 +227,9 @@ defmodule ExYarn.Parser do
       nil ->
         :ok
 
-      [version | _] ->
+      captures ->
+        version = Enum.at(captures, 1)
+
         if String.to_integer(version) > @lockfile_version do
           {:error, ParseError.new("Lockfile version #{version} is not supported.", token)}
         else
