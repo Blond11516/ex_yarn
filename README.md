@@ -16,13 +16,11 @@ end
 
 ## Documentation
 
-**Please note that actual documentation has yet to be written, but the link below already works and will be updated once I have written some docs.**
-
 Documentation is generated with [ExDoc](https://github.com/elixir-lang/ex_doc) and is published at [https://hexdocs.pm/ex_yarn](https://hexdocs.pm/ex_yarn).
 
 ## TODOs
 
-- [ ] Write documentation.
+- [x] Write documentation.
 - [ ] Wrap the parser's output in a struct to make actual usage of the library easier.
 - [ ] Improve code quality (this will obviously be an ongoing goal, but credo should at least run without errors for this to be considered "completed").
 - [ ] Consider using [NimbleParsec](https://hexdocs.pm/nimble_parsec/NimbleParsec.html) to replace the parser for better maintainability and performance.
