@@ -157,10 +157,10 @@ defmodule ExYarn.Token do
     cond do
       Regex.match?(~r/^[0-9]/, input) ->
         val =
-          Regex.run(~r/^[0-9]/, input)
+          Regex.run(~r/^[0-9]*/, input)
           |> List.first()
 
-        {String.length(val), build_token(line, col, :number, String.to_integer(val))}
+        {String.length(val), build_token(line, col, :number, String.to_integer(val)), line, col}
 
       Regex.match?(~r/^[a-zA-Z\/.-]/, input) ->
         {name, name_length} =

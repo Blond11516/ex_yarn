@@ -184,4 +184,17 @@ defmodule ExYarnTest do
     {:ok, :success, result} = ExYarn.parse(input)
     assert expected_result == result
   end
+
+  @tag debug: true
+  test "parses integers correctly" do
+    input = """
+    foo:
+      bar 10
+    """
+
+    expected_result = %{"foo" => %{"bar" => 10}}
+
+    {:ok, :success, result} = ExYarn.parse(input)
+    assert expected_result == result
+  end
 end
