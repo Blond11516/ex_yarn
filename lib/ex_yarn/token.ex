@@ -169,26 +169,29 @@ defmodule ExYarn.Token do
 
   defp generate_next_token(input, _last_new_line, line, col) do
     cond do
-      Regex.match?(~r/^[0-9]/, input) ->
-        val =
-          Regex.run(~r/^[0-9]*/, input)
-          |> List.first()
-
-        {String.length(val), build_token(line, col, :number, String.to_integer(val)), line, col}
-
-      Regex.match?(~r/^[a-zA-Z\/.-]/, input) ->
-        {name, name_length} =
-          case Regex.run(~r/.*?[: \r\n,]/, input) do
-            nil -> {input, String.length(input)}
-            [name | _] -> {name, String.length(name) - 1}
-          end
-
-        name = String.slice(name, 0, name_length)
-
-        {name_length, build_token(line, col, :string, name), line, col}
-
-      true ->
-        {0, build_token(line, col, :invalid), line, col}
+      Regex.match?(~r/^[0-9]/, input) -> generate_number_token(input, line, col)
+      Regex.match?(~r/^[a-zA-Z\/.-]/, input) -> generate_string_token(input, line, col)
+      true -> {0, build_token(line, col, :invalid), line, col}
     end
+  end
+
+  defp generate_number_token(input, line, col) do
+    val =
+      Regex.run(~r/^[0-9]*/, input)
+      |> List.first()
+
+    {String.length(val), build_token(line, col, :number, String.to_integer(val)), line, col}
+  end
+
+  defp generate_string_token(input, line, col) do
+    {name, name_length} =
+      case Regex.run(~r/.*?[: \r\n,]/, input) do
+        nil -> {input, String.length(input)}
+        [name | _] -> {name, String.length(name) - 1}
+      end
+
+    name = String.slice(name, 0, name_length)
+
+    {name_length, build_token(line, col, :string, name), line, col}
   end
 end

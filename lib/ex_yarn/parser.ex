@@ -12,7 +12,7 @@ defmodule ExYarn.Parser do
   @version_regex ~r/^yarn lockfile v(\d+)$/
   @lockfile_version 1
 
-  @enforce_keys [:tokens, :current_token]
+  @enforce_keys [:tokens]
   defstruct [:tokens, comments: [], indent: 0, result: %{}, current_token: nil]
 
   @typedoc """
@@ -23,7 +23,7 @@ defmodule ExYarn.Parser do
           comments: [String.t()],
           indent: integer(),
           result: map(),
-          current_token: Token.t()
+          current_token: Token.t() | nil
         }
 
   @doc """
@@ -34,10 +34,10 @@ defmodule ExYarn.Parser do
   """
   @spec parse(String.t()) :: {:ok, map()}
   def parse(input) do
-    [first_token | other_tokens] = Token.tokenize(input)
+    tokens = Token.tokenize(input)
 
     %__MODULE__{result: result} =
-      %__MODULE__{tokens: other_tokens, current_token: first_token}
+      %__MODULE__{tokens: tokens}
       |> next()
       |> do_parse()
 
@@ -70,19 +70,7 @@ defmodule ExYarn.Parser do
       # if we have 0 indentation then the next token doesn't matter
       do_parse(parser)
     else
-      if parser.current_token.type != :indent do
-        # if we have no indentation after a newline then we've gone down a level
-        parser
-      else
-        if parser.current_token.value == parser.indent do
-          # all is good, the indent is on our level
-          next(parser)
-          |> do_parse()
-        else
-          # the indentation is less than our level
-          parser
-        end
-      end
+      handle_indent(parser)
     end
   end
 
@@ -118,41 +106,57 @@ defmodule ExYarn.Parser do
     raise ParseError, message: "Unknown token", token: token
   end
 
+  defp handle_indent(%__MODULE__{current_token: %Token{type: :indent}} = parser) do
+    if parser.current_token.value == parser.indent do
+      # all is good, the indent is on our level
+      next(parser)
+      |> do_parse()
+    else
+      # the indentation is less than our level
+      parser
+    end
+  end
+
+  defp handle_indent(parser) do
+    parser
+  end
+
   defp parse_object(parser, keys, was_colon) do
     cond do
       Token.valid_prop_value?(parser.current_token) ->
-        # plain value
-        update_result(parser, keys, parser.current_token.value)
-        |> next()
-        |> do_parse()
+        parse_plain_value_object(parser, keys)
 
       was_colon ->
-        # parse object
-
-        object_parser = %__MODULE__{parser | indent: parser.indent + 1, result: %{}}
-
-        object_parser = do_parse(object_parser)
-        parser = update_result(parser, keys, object_parser.result)
-
-        parser = %__MODULE__{
-          parser
-          | tokens: object_parser.tokens,
-            comments: object_parser.comments,
-            current_token: object_parser.current_token
-        }
-
-        # {object_parser, token} = do_parse(object_parser, token)
-        # parser = update_result(parser, keys, object_parser.result)
-        # parser = %__MODULE__{parser | tokens: object_parser.tokens, comments: object_parser.comments}
-
-        if parser.indent != 0 and parser.current_token.type != :indent do
-          parser
-        else
-          do_parse(parser)
-        end
+        parse_complex_object(parser, keys)
 
       true ->
         raise ParseError, message: "Invalid value type", token: parser.current_token
+    end
+  end
+
+  defp parse_plain_value_object(parser, keys) do
+    update_result(parser, keys, parser.current_token.value)
+    |> next()
+    |> do_parse()
+  end
+
+  defp parse_complex_object(parser, keys) do
+    object_parser = %__MODULE__{parser | indent: parser.indent + 1, result: %{}}
+
+    object_parser = do_parse(object_parser)
+    parser = update_result(parser, keys, object_parser.result)
+
+    parser = %__MODULE__{
+      parser
+      | tokens: object_parser.tokens,
+        comments: object_parser.comments,
+        current_token: object_parser.current_token
+    }
+
+    if parser.indent != 0 and parser.current_token.type != :indent do
+      parser
+    else
+      do_parse(parser)
     end
   end
 
@@ -186,13 +190,13 @@ defmodule ExYarn.Parser do
   end
 
   @spec on_comment(t()) :: t()
-  defp on_comment(parser) do
-    if is_binary(parser.current_token.value) do
-      validate_lockfile_version(parser.current_token)
-      %__MODULE__{parser | comments: [parser.current_token.value | parser.comments]}
-    else
-      raise ParseError, message: "Expected token value to be a string", token: parser.current_token
-    end
+  defp on_comment(%__MODULE__{current_token: %Token{value: value}} = parser) when is_binary(value) do
+    validate_lockfile_version(parser.current_token)
+    %__MODULE__{parser | comments: [parser.current_token.value | parser.comments]}
+  end
+
+  defp on_comment(%__MODULE__{current_token: current_token}) do
+    raise ParseError, message: "Expected token value to be a string", token: current_token
   end
 
   defp validate_lockfile_version(token) do
