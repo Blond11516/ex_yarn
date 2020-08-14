@@ -13,18 +13,13 @@ defmodule ExYarn do
 
   ## Example
 
-  Given the following `yarn.lock` file:
-  ```yaml
-  foo:
-    "bar" true
-    foo 10
-    foobar: barfoo
-
-  ```
-  The module should be used in the following manner:
-
-      iex> {:ok, input} = File.read("yarn.lock")
-      iex> ExYarn.parse(input, "yarn.lock")
+      iex> input = ~s(
+      ...>foo:
+      ...>  "bar" true
+      ...>  foo 10
+      ...>  foobar: barfoo
+      ...>)
+      ...> ExYarn.parse(input)
       {:ok, :success, %{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}}
   """
 
@@ -36,32 +31,46 @@ defmodule ExYarn do
   @merge_conflict_start "<<<<<<<"
 
   @typedoc """
-  The possible return values of `parse/2`
+  The different types of errors that can be returned by `parse/2`
 
   Types details:
-  - `{:ok, :merge, map()}`: The lockfile contained a merge conflict but was still successfully parsed
-  - `{:ok, :success, map()}`: The locfile was successfully parsed
-  - `{:error, _}`: There was an error while parsing the lockfile.
-  The second element indicates the type of error that occured
-  - `{:error, :conflict, FunctionClauseError}`: The lockfile contained a merge conflict which could not be parsed successfully.
+  - `{:error, ParseError}`: There was an error while parsing the file as a Yarn lockfile.
+  - `{:error, YamlElixir.ParsingError}`: There was an error while parsing the file as a YAML file.
+  - `{:error, FunctionClauseError}`: The lockfile contained a merge conflict which could not be parsed successfully.
   """
-  @type parseResult ::
-          {:ok, :merge | :success, map()}
-          | {:error, ParseError.t()}
-          | {:error, YamlElixir.FileNotFoundError}
+  @type parsingError ::
+          {:error, ParseError}
           | {:error, YamlElixir.ParsingError}
-          | {:error, :conflict, FunctionClauseError}
+          | {:error, FunctionClauseError}
 
   @doc """
   Receives the lockfile's contents, and optionnally the lockfile's name as inputs
-  and returns the parse result
+  and returns the parsed result
 
   The lockfile's name is used to determine whether to parse the lockfile as an
   official yarn lockfile (i.e. with yarn's custom format) or as a regular YAML
   file. The function defaults to parsing the file as a yarn lockfile.
   """
-  @spec parse(String.t(), String.t()) :: parseResult()
+  @spec parse(any, any) ::
+          parsingError()
+          | {:ok, :merge | :success, map}
   def parse(str, file_loc \\ "lockfile") do
+    {type, result} = parse!(str, file_loc)
+    {:ok, type, result}
+  rescue
+    e in ParseError -> {:error, e}
+    e in YamlElixir.ParsingError -> {:error, e}
+    e in FunctionClauseError -> {:error, e}
+  end
+
+  @doc """
+  Receives the lockfile's contents, and optionnally the lockfile's name as inputs
+  and returns the parsed result
+
+  Similar to `parse/2` except it will raise in case of errors.
+  """
+  @spec parse!(String.t(), String.t()) :: {:merge | :success, map()}
+  def parse!(str, file_loc \\ "lockfile") do
     str = String.replace_prefix(str, "\uFEFF", "")
 
     if has_merge_conflict?(str) do
@@ -113,7 +122,7 @@ defmodule ExYarn do
       String.contains?(str, @merge_conflict_end)
   end
 
-  @spec parse_file(String.t(), String.t()) :: parseResult()
+  @spec parse_file(String.t(), String.t()) :: {:success, map()}
   defp parse_file(str, file_loc) do
     if String.ends_with?(file_loc, ".yml") do
       parse_file_yaml(str)
@@ -123,50 +132,33 @@ defmodule ExYarn do
   end
 
   defp parse_file_yaml(str) do
-    case YamlElixir.read_from_string(str) do
-      {:error, error} -> {:error, error}
-      {:ok, result} -> {:ok, {:success, result}}
-    end
+    result = YamlElixir.read_from_string!(str)
+    {:success, result}
   end
 
   defp parse_file_yarn(str) do
-    case Parser.parse(str) do
-      {:error, error} ->
-        case YamlElixir.read_from_string(str) do
-          {:error, _} -> {:error, error}
-          {:ok, result} -> {:ok, :success, result}
-        end
-
-      {:ok, result} ->
-        {:ok, :success, result}
-    end
+    {:ok, result} = Parser.parse(str)
+    {:success, result}
+  rescue
+    e in ParseError ->
+      try do
+        parse_file_yaml(str)
+      rescue
+        _ in YamlElixir.ParsingError -> reraise e, __STACKTRACE__
+      end
   end
 
-  @spec parse_with_conflict(String.t(), String.t()) :: parseResult()
+  @spec parse_with_conflict(String.t(), String.t()) :: {:merge | :success, map()}
   defp parse_with_conflict(str, file_loc) do
     {variant1, variant2} = extract_conflict_variants(str)
 
-    try do
-      parse_result_1 = parse(variant1, file_loc)
-      parse_result_2 = parse(variant2, file_loc)
+    {_, parse_result_1} = parse!(variant1, file_loc)
+    {_, parse_result_2} = parse!(variant2, file_loc)
 
-      interpret_conflict_results(parse_result_1, parse_result_2)
-    rescue
-      e in FunctionClauseError -> {:error, :conflict, e}
-    end
+    merge_conflict_results(parse_result_1, parse_result_2)
   end
 
-  defp interpret_conflict_results({:error, error}, _parse_result_2) do
-    {:error, error}
-  end
-
-  defp interpret_conflict_results(_parse_result_1, {:error, error}) do
-    {:error, error}
-  end
-
-  defp interpret_conflict_results(parse_result_1, parse_result_2) do
-    {:ok, _, parsed_obj_1} = parse_result_1
-    {:ok, _, parsed_obj_2} = parse_result_2
-    {:ok, :merge, Map.merge(parsed_obj_1, parsed_obj_2)}
+  defp merge_conflict_results(parse_result_1, parse_result_2) do
+    {:merge, Map.merge(parse_result_1, parse_result_2)}
   end
 end

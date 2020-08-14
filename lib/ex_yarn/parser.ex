@@ -7,7 +7,7 @@ defmodule ExYarn.Parser do
   reprsenting the lockfile's contents.
   """
 
-  alias ExYarn.{Token, ParseError}
+  alias ExYarn.{ParseError, Token}
 
   @version_regex ~r/^yarn lockfile v(\d+)$/
   @lockfile_version 1
@@ -31,33 +31,21 @@ defmodule ExYarn.Parser do
   Receives the lockfile's content as a `String` and returns the parsed map
   representing the lockfile as a `Map`.
   """
-  @spec parse(String.t()) :: {:ok, map()} | {:error, ParseError.t()}
+  @spec parse(String.t()) :: {:ok, map()}
   def parse(input) do
-    case Token.tokenize(input) do
-      {:error, error} ->
-        {:error, error}
+    tokens = Token.tokenize(input)
 
-      tokens ->
-        parser = %__MODULE__{
-          tokens: tokens
-        }
+    {parser, token} =
+      %__MODULE__{tokens: tokens}
+      |> next()
 
-        case next(parser) do
-          {:error, error} ->
-            {:error, error}
-
-          {parser, token} ->
-            case do_parse(parser, token) do
-              {:error, error} -> {:error, error}
-              {parser, _token} -> {:ok, parser.result}
-            end
-        end
-    end
+    {parser, _token} = do_parse(parser, token)
+    {:ok, parser.result}
   end
 
-  @spec next(t()) :: {t(), Token.t()} | {:error, ParseError.t()}
+  @spec next(t()) :: {t(), Token.t()}
   defp next(%__MODULE__{tokens: []}) do
-    {:error, ParseError.new("No more tokens.", nil)}
+    raise ParseError, message: "No more tokens"
   end
 
   defp next(%__MODULE__{tokens: [token | tokens]} = parser) do
@@ -65,52 +53,42 @@ defmodule ExYarn.Parser do
 
     case token.type do
       :comment ->
-        case on_comment(parser, token) do
-          {:error, error} -> {:error, error}
-          parser -> next(parser)
-        end
+        on_comment(parser, token)
+        |> next()
 
       _ ->
         {parser, token}
     end
   end
 
-  @spec do_parse(t(), Token.t()) :: {t(), Token.t()} | {:error, ParseError.t()}
+  @spec do_parse(t(), Token.t()) :: {t(), Token.t()}
   defp do_parse(parser, %Token{type: :new_line}) do
-    case next(parser) do
-      {:error, error} ->
-        {:error, error}
+    {parser, token} = next(parser)
 
-      {parser, token} ->
-        if parser.indent == 0 do
-          # if we have 0 indentation then the next token doesn't matter
+    if parser.indent == 0 do
+      # if we have 0 indentation then the next token doesn't matter
+      do_parse(parser, token)
+    else
+      if token.type != :indent do
+        # if we have no indentation after a newline then we've gone down a level
+        {parser, token}
+      else
+        if token.value == parser.indent do
+          # all is good, the indent is on our level
+          {parser, token} = next(parser)
           do_parse(parser, token)
         else
-          if token.type != :indent do
-            # if we have no indentation after a newline then we've gone down a level
-            {parser, token}
-          else
-            if token.value == parser.indent do
-              # all is good, the indent is on our level
-              case next(parser) do
-                {:error, error} -> {:error, error}
-                {parser, token} -> do_parse(parser, token)
-              end
-            else
-              # the indentation is less than our level
-              {parser, token}
-            end
-          end
+          # the indentation is less than our level
+          {parser, token}
         end
+      end
     end
   end
 
   defp do_parse(parser, %Token{type: :indent} = token) do
     if token.value == parser.indent do
-      case next(parser) do
-        {:error, error} -> {:error, error}
-        {parser, next_token} -> do_parse(parser, next_token)
-      end
+      {parser, next_token} = next(parser)
+      do_parse(parser, next_token)
     else
       {parser, token}
     end
@@ -121,33 +99,19 @@ defmodule ExYarn.Parser do
   end
 
   defp do_parse(parser, %Token{type: :string, value: value}) do
-    case next(parser) do
-      {:error, error} ->
-        {:error, error}
+    {parser, token} = next(parser)
+    {parser, token, keys} = parse_keys(parser, token, [value])
 
-      {parser, token} ->
-        case parse_keys(parser, token, [value]) do
-          {:error, error} ->
-            {:error, error}
-
-          {parser, token, keys} ->
-            if token.type == :colon do
-              case next(parser) do
-                {:error, error} ->
-                  {:error, error}
-
-                {parser, token} ->
-                  parse_object(parser, token, keys, true)
-              end
-            else
-              parse_object(parser, token, keys, false)
-            end
-        end
+    if token.type == :colon do
+      {parser, token} = next(parser)
+      parse_object(parser, token, keys, true)
+    else
+      parse_object(parser, token, keys, false)
     end
   end
 
   defp do_parse(_parser, token) do
-    {:error, ParseError.new("Unknown token: #{inspect(token)}", token)}
+    raise ParseError, message: "Unknown token", token: token
   end
 
   defp parse_object(parser, token, keys, was_colon) do
@@ -156,33 +120,26 @@ defmodule ExYarn.Parser do
         # plain value
         parser = update_result(parser, keys, token.value)
 
-        case next(parser) do
-          {:error, error} -> {:error, error}
-          {parser, token} -> do_parse(parser, token)
-        end
+        {parser, token} = next(parser)
+        do_parse(parser, token)
 
       was_colon ->
         # parse object
 
         object_parser = %__MODULE__{parser | indent: parser.indent + 1, result: %{}}
 
-        case do_parse(object_parser, token) do
-          {:error, error} ->
-            {:error, error}
+        {object_parser, token} = do_parse(object_parser, token)
+        parser = update_result(parser, keys, object_parser.result)
+        parser = %__MODULE__{parser | tokens: object_parser.tokens, comments: object_parser.comments}
 
-          {object_parser, token} ->
-            parser = update_result(parser, keys, object_parser.result)
-            parser = %__MODULE__{parser | tokens: object_parser.tokens, comments: object_parser.comments}
-
-            if parser.indent != 0 and token.type != :indent do
-              {parser, token}
-            else
-              do_parse(parser, token)
-            end
+        if parser.indent != 0 and token.type != :indent do
+          {parser, token}
+        else
+          do_parse(parser, token)
         end
 
       true ->
-        {:error, ParseError.new("Invalid value type", token)}
+        raise ParseError, message: "Invalid value type", token: token
     end
   end
 
@@ -197,23 +154,17 @@ defmodule ExYarn.Parser do
   end
 
   defp parse_keys(parser, %Token{type: :comma}, keys) do
-    case next(parser) do
-      {:error, error} ->
-        {:error, error}
+    {parser, token} = next(parser)
 
-      {parser, token} ->
-        case token.type do
-          :string ->
-            key = token.value
+    case token.type do
+      :string ->
+        key = token.value
 
-            case next(parser) do
-              {:error, error} -> {:error, error}
-              {parser, token} -> parse_keys(parser, token, [key | keys])
-            end
+        {parser, token} = next(parser)
+        parse_keys(parser, token, [key | keys])
 
-          _ ->
-            {:error, ParseError.new("Expected string", token)}
-        end
+      _ ->
+        raise ParseError, message: "Expected string", token: token
     end
   end
 
@@ -221,15 +172,13 @@ defmodule ExYarn.Parser do
     {parser, token, keys}
   end
 
-  @spec on_comment(t(), Token.t()) :: t() | {:error, ParseError.t()}
+  @spec on_comment(t(), Token.t()) :: t()
   defp on_comment(parser, token) do
     if is_binary(token.value) do
-      case validate_lockfile_version(token) do
-        {:error, error} -> {:error, error}
-        :ok -> %__MODULE__{parser | comments: [token.value | parser.comments]}
-      end
+      validate_lockfile_version(token)
+      %__MODULE__{parser | comments: [token.value | parser.comments]}
     else
-      {:error, ParseError.new("Expected token value to be a string.", token)}
+      raise ParseError, message: "Expected token value to be a string", token: token
     end
   end
 
@@ -244,7 +193,7 @@ defmodule ExYarn.Parser do
         version = Enum.at(captures, 1)
 
         if String.to_integer(version) > @lockfile_version do
-          {:error, ParseError.new("Lockfile version #{version} is not supported.", token)}
+          raise ParseError, message: "Lockfile version #{version} is not supported", token: token
         else
           :ok
         end

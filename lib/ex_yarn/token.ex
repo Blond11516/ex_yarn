@@ -55,46 +55,38 @@ defmodule ExYarn.Token do
   Main entrypoint for the module. Takes as input a `String` representing the
   contents of a yarn lockfile and returns the corresponding list of tokens.
   """
-  @spec tokenize(String.t()) :: [t()] | {:error, ParseError.t()}
+  @spec tokenize(String.t()) :: [t()]
   def tokenize(input) do
-    case tokenize(input, false, 1, 0, []) do
-      {:error, error} -> {:error, error}
-      tokens -> Enum.reverse(tokens)
-    end
+    tokenize(input, false, 1, 0, [])
+    |> Enum.reverse()
   end
 
-  @spec tokenize(String.t(), boolean(), integer(), integer(), [t()]) ::
-          [t()] | {:error, ParseError.t()}
+  @spec tokenize(String.t(), boolean(), integer(), integer(), [t()]) :: [t()]
   defp tokenize("", _last_new_line, line, col, tokens) do
     [build_token(line, col, :eof) | tokens]
   end
 
   defp tokenize(input, last_new_line, line, col, tokens) do
-    case generate_next_token(input, last_new_line, line, col) do
-      {:error, error} ->
-        {:error, error}
+    {chop, token, line, col} = generate_next_token(input, last_new_line, line, col)
 
-      {chop, token, line, col} ->
-        tokens =
-          case token do
-            nil -> tokens
-            token -> [token | tokens]
-          end
+    tokens =
+      case token do
+        nil -> tokens
+        token -> [token | tokens]
+      end
 
-        tokens =
-          case chop do
-            0 -> [build_token(line, col, :invalid) | tokens]
-            _ -> tokens
-          end
+    tokens =
+      case chop do
+        0 -> [build_token(line, col, :invalid) | tokens]
+        _ -> tokens
+      end
 
-        col = col + chop
+    col = col + chop
 
-        last_new_line = String.at(input, 0) == "\n" or String.at(input, 0) == "\r\n"
+    last_new_line = String.at(input, 0) == "\n" or String.at(input, 0) == "\r\n"
 
-        input = String.slice(input, chop..-1)
-
-        tokenize(input, last_new_line, line, col, tokens)
-    end
+    String.slice(input, chop..-1)
+    |> tokenize(last_new_line, line, col, tokens)
   end
 
   @spec build_token(integer(), integer(), tokenType, any()) :: t()
@@ -103,7 +95,7 @@ defmodule ExYarn.Token do
   end
 
   @spec generate_next_token(String.t(), boolean(), integer(), integer()) ::
-          {integer(), t() | nil, integer(), integer()} | {:error, ParseError.t()}
+          {integer(), t() | nil, integer(), integer()}
   defp generate_next_token("\n" <> _rest, _last_new_line, line, _col) do
     line = line + 1
     col = 0
@@ -144,7 +136,7 @@ defmodule ExYarn.Token do
     if rem(indent_size, 2) == 0 do
       {indent_size, build_token(line, col, :indent, indent_size / 2), line, col}
     else
-      {:error, ParseError.new("Invalid number of spaces.", build_token(line, col, :invalid))}
+      raise ParseError, message: "Invalid number of spaces", token: build_token(line, col, :invalid)
     end
   end
 

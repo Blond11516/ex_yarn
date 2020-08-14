@@ -126,9 +126,8 @@ defmodule ExYarnTest do
       >>>>>>> branch-a
       """
 
-      {success?, type, _result} = ExYarn.parse(input)
+      {success?, _result} = ExYarn.parse(input)
       assert :error == success?
-      assert :conflict == type
     end
 
     test "discards common ancestors in merge conflicts" do
@@ -185,7 +184,6 @@ defmodule ExYarnTest do
     assert expected_result == result
   end
 
-  @tag debug: true
   test "parses integers correctly" do
     input = """
     foo:
