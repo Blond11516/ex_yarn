@@ -24,5 +24,5 @@ Documentation is generated with [ExDoc](https://github.com/elixir-lang/ex_doc) a
 
 - [x] Write documentation.
 - [ ] Wrap the parser's output in a struct to make actual usage of the library easier.
-- [ ] Improve code quality (this will obviously be an ongoing goal, but credo should at least run without errors for this to be considered "completed").
+- [x] Improve code quality (this will obviously be an ongoing goal, but credo should at least run without errors for this to be considered "completed").
 - [ ] Consider using [NimbleParsec](https://hexdocs.pm/nimble_parsec/NimbleParsec.html) to replace the parser for better maintainability and performance.
