@@ -12,8 +12,8 @@ defmodule ExYarn.Parser do
   @version_regex ~r/^yarn lockfile v(\d+)$/
   @lockfile_version 1
 
-  @enforce_keys [:tokens]
-  defstruct [:tokens, comments: [], indent: 0, result: %{}]
+  @enforce_keys [:tokens, :current_token]
+  defstruct [:tokens, comments: [], indent: 0, result: %{}, current_token: nil]
 
   @typedoc """
   This type is meant for internal use only and reprsents the parser's state
@@ -22,7 +22,8 @@ defmodule ExYarn.Parser do
           tokens: [Token.t()],
           comments: [String.t()],
           indent: integer(),
-          result: map()
+          result: map(),
+          current_token: Token.t()
         }
 
   @doc """
@@ -33,113 +34,125 @@ defmodule ExYarn.Parser do
   """
   @spec parse(String.t()) :: {:ok, map()}
   def parse(input) do
-    tokens = Token.tokenize(input)
+    [first_token | other_tokens] = Token.tokenize(input)
 
-    {parser, token} =
-      %__MODULE__{tokens: tokens}
+    %__MODULE__{result: result} =
+      %__MODULE__{tokens: other_tokens, current_token: first_token}
       |> next()
+      |> do_parse()
 
-    {parser, _token} = do_parse(parser, token)
-    {:ok, parser.result}
+    {:ok, result}
   end
 
-  @spec next(t()) :: {t(), Token.t()}
+  @spec next(t()) :: t()
   defp next(%__MODULE__{tokens: []}) do
     raise ParseError, message: "No more tokens"
   end
 
   defp next(%__MODULE__{tokens: [token | tokens]} = parser) do
-    parser = %{parser | tokens: tokens}
+    parser = %{parser | tokens: tokens, current_token: token}
 
-    case token.type do
+    case parser.current_token.type do
       :comment ->
-        on_comment(parser, token)
+        on_comment(parser)
         |> next()
 
       _ ->
-        {parser, token}
+        parser
     end
   end
 
-  @spec do_parse(t(), Token.t()) :: {t(), Token.t()}
-  defp do_parse(parser, %Token{type: :new_line}) do
-    {parser, token} = next(parser)
+  @spec do_parse(t()) :: t()
+  defp do_parse(%__MODULE__{current_token: %Token{type: :new_line}} = parser) do
+    parser = next(parser)
 
     if parser.indent == 0 do
       # if we have 0 indentation then the next token doesn't matter
-      do_parse(parser, token)
+      do_parse(parser)
     else
-      if token.type != :indent do
+      if parser.current_token.type != :indent do
         # if we have no indentation after a newline then we've gone down a level
-        {parser, token}
+        parser
       else
-        if token.value == parser.indent do
+        if parser.current_token.value == parser.indent do
           # all is good, the indent is on our level
-          {parser, token} = next(parser)
-          do_parse(parser, token)
+          next(parser)
+          |> do_parse()
         else
           # the indentation is less than our level
-          {parser, token}
+          parser
         end
       end
     end
   end
 
-  defp do_parse(parser, %Token{type: :indent} = token) do
-    if token.value == parser.indent do
-      {parser, next_token} = next(parser)
-      do_parse(parser, next_token)
+  defp do_parse(%__MODULE__{current_token: %Token{type: :indent}} = parser) do
+    %__MODULE__{current_token: token} = parser
+
+    if parser.current_token.value == parser.indent do
+      next(parser)
+      |> do_parse()
     else
-      {parser, token}
+      %__MODULE__{parser | current_token: token}
     end
   end
 
-  defp do_parse(parser, %Token{type: :eof} = token) do
-    {parser, token}
+  defp do_parse(%__MODULE__{current_token: %Token{type: :eof}} = parser) do
+    parser
   end
 
-  defp do_parse(parser, %Token{type: :string, value: value}) do
-    {parser, token} = next(parser)
-    {parser, token, keys} = parse_keys(parser, token, [value])
+  defp do_parse(%__MODULE__{current_token: %Token{type: :string, value: value}} = parser) do
+    {parser, keys} =
+      next(parser)
+      |> parse_keys([value])
 
-    if token.type == :colon do
-      {parser, token} = next(parser)
-      parse_object(parser, token, keys, true)
+    if parser.current_token.type == :colon do
+      next(parser)
+      |> parse_object(keys, true)
     else
-      parse_object(parser, token, keys, false)
+      parse_object(parser, keys, false)
     end
   end
 
-  defp do_parse(_parser, token) do
+  defp do_parse(%__MODULE__{current_token: token}) do
     raise ParseError, message: "Unknown token", token: token
   end
 
-  defp parse_object(parser, token, keys, was_colon) do
+  defp parse_object(parser, keys, was_colon) do
     cond do
-      Token.valid_prop_value?(token) ->
+      Token.valid_prop_value?(parser.current_token) ->
         # plain value
-        parser = update_result(parser, keys, token.value)
-
-        {parser, token} = next(parser)
-        do_parse(parser, token)
+        update_result(parser, keys, parser.current_token.value)
+        |> next()
+        |> do_parse()
 
       was_colon ->
         # parse object
 
         object_parser = %__MODULE__{parser | indent: parser.indent + 1, result: %{}}
 
-        {object_parser, token} = do_parse(object_parser, token)
+        object_parser = do_parse(object_parser)
         parser = update_result(parser, keys, object_parser.result)
-        parser = %__MODULE__{parser | tokens: object_parser.tokens, comments: object_parser.comments}
 
-        if parser.indent != 0 and token.type != :indent do
-          {parser, token}
+        parser = %__MODULE__{
+          parser
+          | tokens: object_parser.tokens,
+            comments: object_parser.comments,
+            current_token: object_parser.current_token
+        }
+
+        # {object_parser, token} = do_parse(object_parser, token)
+        # parser = update_result(parser, keys, object_parser.result)
+        # parser = %__MODULE__{parser | tokens: object_parser.tokens, comments: object_parser.comments}
+
+        if parser.indent != 0 and parser.current_token.type != :indent do
+          parser
         else
-          do_parse(parser, token)
+          do_parse(parser)
         end
 
       true ->
-        raise ParseError, message: "Invalid value type", token: token
+        raise ParseError, message: "Invalid value type", token: parser.current_token
     end
   end
 
@@ -153,32 +166,32 @@ defmodule ExYarn.Parser do
     %__MODULE__{parser | result: Map.merge(parser.result, new_results)}
   end
 
-  defp parse_keys(parser, %Token{type: :comma}, keys) do
-    {parser, token} = next(parser)
+  defp parse_keys(%__MODULE__{current_token: %Token{type: :comma}} = parser, keys) do
+    parser = next(parser)
 
-    case token.type do
+    case parser.current_token.type do
       :string ->
-        key = token.value
+        key = parser.current_token.value
 
-        {parser, token} = next(parser)
-        parse_keys(parser, token, [key | keys])
+        next(parser)
+        |> parse_keys([key | keys])
 
       _ ->
-        raise ParseError, message: "Expected string", token: token
+        raise ParseError, message: "Expected string", token: parser.current_token
     end
   end
 
-  defp parse_keys(parser, token, keys) do
-    {parser, token, keys}
+  defp parse_keys(parser, keys) do
+    {parser, keys}
   end
 
-  @spec on_comment(t(), Token.t()) :: t()
-  defp on_comment(parser, token) do
-    if is_binary(token.value) do
-      validate_lockfile_version(token)
-      %__MODULE__{parser | comments: [token.value | parser.comments]}
+  @spec on_comment(t()) :: t()
+  defp on_comment(parser) do
+    if is_binary(parser.current_token.value) do
+      validate_lockfile_version(parser.current_token)
+      %__MODULE__{parser | comments: [parser.current_token.value | parser.comments]}
     else
-      raise ParseError, message: "Expected token value to be a string", token: token
+      raise ParseError, message: "Expected token value to be a string", token: parser.current_token
     end
   end
 
