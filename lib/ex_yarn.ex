@@ -20,7 +20,7 @@ defmodule ExYarn do
       ...>  foobar: barfoo
       ...>)
       ...> ExYarn.parse(input)
-      {:ok, :success, %{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}}
+      {:ok, :success, {%{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}, []}}
   """
 
   alias ExYarn.Parser
@@ -54,10 +54,10 @@ defmodule ExYarn do
   """
   @spec parse(any, any) ::
           parsingError()
-          | {:ok, :merge | :success, map}
+          | {:ok, :merge | :success, {map(), [String.t()]}}
   def parse(str, file_loc \\ "lockfile") do
-    {type, result} = parse!(str, file_loc)
-    {:ok, type, result}
+    {type, {result, comments}} = parse!(str, file_loc)
+    {:ok, type, {result, Enum.reverse(comments)}}
   rescue
     e in ParseError -> {:error, e}
     e in YamlElixir.ParsingError -> {:error, e}
@@ -70,7 +70,7 @@ defmodule ExYarn do
 
   Similar to `parse/2` except it will raise in case of errors.
   """
-  @spec parse!(String.t(), String.t()) :: {:merge | :success, map()}
+  @spec parse!(String.t(), String.t()) :: {:merge | :success, {map(), [String.t()]}}
   def parse!(str, file_loc \\ "lockfile") do
     str = String.replace_prefix(str, "\uFEFF", "")
 
@@ -123,7 +123,7 @@ defmodule ExYarn do
       String.contains?(str, @merge_conflict_end)
   end
 
-  @spec parse_file(String.t(), String.t()) :: {:success, map()}
+  @spec parse_file(String.t(), String.t()) :: {:success, {map(), [String.t()]}}
   defp parse_file(str, file_loc) do
     if String.ends_with?(file_loc, ".yml") do
       parse_file_yaml(str)
@@ -134,12 +134,12 @@ defmodule ExYarn do
 
   defp parse_file_yaml(str) do
     result = YamlElixir.read_from_string!(str)
-    {:success, result}
+    {:success, {result, []}}
   end
 
   defp parse_file_yarn(str) do
-    {:ok, result} = Parser.parse(str)
-    {:success, result}
+    {:ok, result, comments} = Parser.parse(str)
+    {:success, {result, comments}}
   rescue
     e in ParseError ->
       try do
@@ -149,7 +149,7 @@ defmodule ExYarn do
       end
   end
 
-  @spec parse_with_conflict(String.t(), String.t()) :: {:merge | :success, map()}
+  @spec parse_with_conflict(String.t(), String.t()) :: {:merge | :success, {map(), [String.t()]}}
   defp parse_with_conflict(str, file_loc) do
     {variant1, variant2} = extract_conflict_variants(str)
 
@@ -159,7 +159,7 @@ defmodule ExYarn do
     merge_conflict_results(parse_result_1, parse_result_2)
   end
 
-  defp merge_conflict_results(parse_result_1, parse_result_2) do
-    {:merge, Map.merge(parse_result_1, parse_result_2)}
+  defp merge_conflict_results({result_map_1, comments_1}, {result_map_2, comments_2}) do
+    {:merge, {Map.merge(result_map_1, result_map_2), Enum.uniq(comments_1 ++ comments_2)}}
   end
 end

@@ -32,16 +32,16 @@ defmodule ExYarn.Parser do
   Receives the lockfile's content as a `String` and returns the parsed map
   representing the lockfile as a `Map`.
   """
-  @spec parse(String.t()) :: {:ok, map()}
+  @spec parse(String.t()) :: {:ok, map(), [String.t()]}
   def parse(input) do
     tokens = Token.tokenize(input)
 
-    %__MODULE__{result: result} =
+    %__MODULE__{result: result, comments: comments} =
       %__MODULE__{tokens: tokens}
       |> next()
       |> do_parse()
 
-    {:ok, result}
+    {:ok, result, comments}
   end
 
   @spec next(t()) :: t()
