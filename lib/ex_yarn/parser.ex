@@ -2,12 +2,12 @@ defmodule ExYarn.Parser do
   @moduledoc """
   Main module for parsing lockfiles (intended for internal use only)
 
-  This module receives the lockfile as input, passes it over to `ExYarn.Token`
+  This module receives the lockfile as input, passes it over to `ExYarn.Parser.Token`
   for tokenization and parses the resulting token list to generate the map
   reprsenting the lockfile's contents.
   """
 
-  alias ExYarn.{ParseError, Token}
+  alias ExYarn.Parser.{ParseError, Token}
 
   @version_regex ~r/^yarn lockfile v(\d+)$/
   @lockfile_version 1

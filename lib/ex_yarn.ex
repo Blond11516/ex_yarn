@@ -23,7 +23,8 @@ defmodule ExYarn do
       {:ok, :success, %{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}}
   """
 
-  alias ExYarn.{ParseError, Parser}
+  alias ExYarn.Parser
+  alias ExYarn.Parser.ParseError
 
   @merge_conflict_ancestor "|||||||"
   @merge_conflict_end ">>>>>>>"

@@ -1,8 +1,8 @@
-defmodule ExYarn.ParseError do
+defmodule ExYarn.Parser.ParseError do
   @moduledoc """
   Represents an error that has occured while parsing a lockfile.
 
-  A `ParseError` contains an error message and, if possible, the `ExYarn.Token` that caused the error.
+  A `ParseError` contains an error message and, if possible, the `ExYarn.Parser.Token` that caused the error.
   """
 
   defexception [:message, :token]
