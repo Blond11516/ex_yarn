@@ -15,6 +15,10 @@ defmodule ExYarn.MixProject do
       docs: [
         main: "ExYarn",
         extras: ["README.md"]
+      ],
+      dialyzer: [
+        plt_add_apps: [:ex_unit],
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
       ]
     ]
   end
