@@ -62,14 +62,12 @@ defmodule ExYarn.Lockfile do
   defp find_version([comment | comments]) do
     matches = Regex.run(@version_regex, comment)
 
-    cond do
-      length(matches) >= 2 ->
-        matches
-        |> Enum.at(1)
-        |> String.to_integer()
-
-      true ->
-        find_version(comments)
+    if length(matches) >= 2 do
+      matches
+      |> Enum.at(1)
+      |> String.to_integer()
+    else
+      find_version(comments)
     end
   end
 end
