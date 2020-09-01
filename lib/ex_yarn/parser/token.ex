@@ -33,7 +33,7 @@ defmodule ExYarn.Parser.Token do
   defstruct [:line, :col, :type, :value]
 
   @typedoc """
-  A token represents a discrete piece of text making up a lockfile
+  The representation of a token
   """
   @type t() :: %__MODULE__{
           line: integer(),

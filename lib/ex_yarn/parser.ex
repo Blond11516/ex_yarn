@@ -16,7 +16,7 @@ defmodule ExYarn.Parser do
   defstruct [:tokens, comments: [], indent: 0, result: %{}, current_token: nil]
 
   @typedoc """
-  This type is meant for internal use only and reprsents the parser's state
+  The parser's state. Intended for internal use only.
   """
   @type t() :: %__MODULE__{
           tokens: [Token.t()],
@@ -30,7 +30,7 @@ defmodule ExYarn.Parser do
   The module's entrypoint
 
   Receives the lockfile's content as a `String` and returns the parsed map
-  representing the lockfile as a `Map`.
+  representing the lockfile as a `Map` and the list of comments.
   """
   @spec parse(String.t()) :: {:ok, map(), [String.t()]}
   def parse(input) do

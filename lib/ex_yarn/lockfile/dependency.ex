@@ -1,20 +1,41 @@
 defmodule ExYarn.Lockfile.Dependency do
-  @moduledoc false
+  @moduledoc """
+  An NPM dependency
+
+  This module represents an NPM dependency as parsed by ExYarn. It does not
+  provide any utility functions and is therefore intended for data
+  representation only.
+  """
 
   @enforce_keys [:name, :version, :resolved]
   defstruct [:name, :version, :resolved, :integrity, :dependencies, :optional_dependencies]
 
+  @type dep_name :: String.t()
+  @type dep_version :: String.t()
+
+  @typedoc """
+  The represenation of a dependency.
+  """
   @type t() :: %__MODULE__{
-          name: String.t(),
-          version: String.t(),
+          name: dep_name(),
+          version: dep_version(),
           resolved: String.t(),
           integrity: String.t() | nil,
           dependencies: [sub_dependency()],
           optional_dependencies: [sub_dependency()]
         }
 
-  @type sub_dependency :: {String.t(), String.t()}
+  @typedoc """
+  The representation of a sub-dependency.
+  """
+  @type sub_dependency :: {dep_name(), dep_version()}
 
+  @doc """
+  Creates a Dependency struct from a parsed dependency map
+
+  Receives a map as returned by the `ExYarn.Parser` and returns
+  the corresponding Dependency struct.
+  """
   @spec from_result_map(map()) :: t()
   def from_result_map(result) do
     name =

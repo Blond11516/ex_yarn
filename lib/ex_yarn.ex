@@ -2,8 +2,9 @@ defmodule ExYarn do
   @moduledoc """
   The library's main module
 
-  This module should be used as the public entrypoint of the library. It exposes
-  a single function, `parse/2`, which is used to parse a lockfile's contents.
+  This module should be used as the main entrypoint of the library. It exposes
+  a single function, `parse/2` (along with its error raising variant,
+  parse!/2`), which is used to parse a lockfile's contents.
 
   **Note on performance:** This library was built in part as a learning exercise and therefore does not necessarily
   apply the best possible practices and tools when it comes to code quality and performance. If performance is important
@@ -14,13 +15,14 @@ defmodule ExYarn do
   ## Example
 
       iex> input = ~s(
+      ...># a comment
       ...>foo:
       ...>  "bar" true
       ...>  foo 10
       ...>  foobar: barfoo
       ...>)
       ...> ExYarn.parse(input)
-      {:ok, :success, {%{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}, []}}
+      {:ok, :success, {%{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}, [" a comment"]}}
   """
 
   alias ExYarn.Parser
