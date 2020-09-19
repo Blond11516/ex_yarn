@@ -1,4 +1,4 @@
-defmodule ExYarn.Parsing.ParseError do
+defmodule ExYarn.ParseError do
   @moduledoc """
   Represents an error that has occured while parsing a lockfile.
 
@@ -8,10 +8,11 @@ defmodule ExYarn.Parsing.ParseError do
   defexception [:message, :token]
 
   @impl true
-  def message(e) do
-    case e.token do
-      nil -> e.message
-      token -> "#{e.message}: #{inspect(token)}"
-    end
+  def message(%{message: message, token: token}) do
+    "#{message}: #{inspect(token)}"
+  end
+
+  def message(%{message: message}) do
+    message
   end
 end

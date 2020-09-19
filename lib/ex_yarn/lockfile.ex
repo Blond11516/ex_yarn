@@ -8,8 +8,7 @@ defmodule ExYarn.Lockfile do
   building a Lockfile from `ExYarn.Parser`'s output.
   """
 
-  alias ExYarn.Lockfile.Dependency
-  alias ExYarn.Parser
+  alias ExYarn.Dependency
 
   @enforce_keys [:version, :dependencies, :comments]
   defstruct [:version, :dependencies, :comments]
@@ -54,21 +53,6 @@ defmodule ExYarn.Lockfile do
     {:ok, from_parse_result!(parse_result)}
   rescue
     error -> {:error, error}
-  end
-
-  @spec from_file!(String.t()) :: ExYarn.Lockfile.t()
-  def from_file!(file_path) do
-    {_, parse_result} = Parser.parse_file!(file_path)
-
-    from_parse_result!(parse_result)
-  end
-
-  @spec from_file(Path.t()) ::
-          {:error, %{:__exception__ => true, :__struct__ => atom, optional(atom) => any}} | {:ok, ExYarn.Lockfile.t()}
-  def from_file(file_path) do
-    {:ok, from_file!(file_path)}
-  rescue
-    e -> {:error, e}
   end
 
   defp find_version([]) do

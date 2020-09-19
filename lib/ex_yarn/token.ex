@@ -1,4 +1,4 @@
-defmodule ExYarn.Parsing.Token do
+defmodule ExYarn.Token do
   @moduledoc """
   A token is the building block of a lockfile (intended for internal use only)
 
@@ -8,8 +8,6 @@ defmodule ExYarn.Parsing.Token do
   Tokens represent every piece that makes up a lockfile, from comments, strings
   and integers to line returns, colons and indentation.
   """
-
-  alias ExYarn.Parsing.ParseError
 
   @typedoc """
   The list of types a token can have
@@ -136,7 +134,7 @@ defmodule ExYarn.Parsing.Token do
     if rem(indent_size, 2) == 0 do
       {indent_size, build_token(line, col, :indent, indent_size / 2), line, col}
     else
-      raise ParseError, message: "Invalid number of spaces", token: build_token(line, col, :invalid)
+      throw({:message, "Invalid number of spaces", :token, build_token(line, col, :invalid)})
     end
   end
 

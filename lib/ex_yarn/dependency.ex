@@ -1,4 +1,4 @@
-defmodule ExYarn.Lockfile.Dependency do
+defmodule ExYarn.Dependency do
   @moduledoc """
   An NPM dependency
 

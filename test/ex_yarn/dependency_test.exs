@@ -1,5 +1,5 @@
 defmodule DependencyTest do
-  alias ExYarn.Lockfile.Dependency
+  alias ExYarn.Dependency
 
   use ExUnit.Case, async: true
   doctest Dependency

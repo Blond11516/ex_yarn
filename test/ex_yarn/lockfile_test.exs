@@ -1,9 +1,7 @@
 defmodule LockfileTest do
   use ExUnit.Case, async: true
 
-  alias ExYarn.Lockfile
-  alias ExYarn.Lockfile.Dependency
-  alias ExYarn.Parsing.ParseError
+  alias ExYarn.{Dependency, Lockfile}
 
   @dependency_name "dep_name"
   @parse_result {
@@ -89,53 +87,5 @@ defmodule LockfileTest do
 
       assert expected_lockfile == result
     end
-  end
-
-  describe "from_file!/1" do
-    test "should return a lockfile" do
-      result = Lockfile.from_file!(build_lockfile_path("valid"))
-
-      assert @lockfile == result
-    end
-
-    test "given an unsupported lockfile version comment, should raise an error" do
-      assert_raise ParseError, fn ->
-        Lockfile.from_file!(build_lockfile_path("invalid_version"))
-      end
-    end
-
-    test "given no lockfile version comment, should build a lockfile" do
-      expected_lockfile = %Lockfile{@lockfile | comments: [], version: nil}
-
-      result = Lockfile.from_file!(build_lockfile_path("no_version"))
-
-      assert expected_lockfile == result
-    end
-  end
-
-  describe "from_file/1" do
-    test "should return a lockfile" do
-      {:ok, result} = Lockfile.from_file(build_lockfile_path("valid"))
-
-      assert @lockfile == result
-    end
-
-    test "given an unsupported lockfile version comment, should return an error tuple" do
-      result = Lockfile.from_file(build_lockfile_path("invalid_version"))
-
-      assert {:error, _} = result
-    end
-
-    test "given no lockfile version comment, should build a lockfile" do
-      expected_lockfile = %Lockfile{@lockfile | comments: [], version: nil}
-
-      {:ok, result} = Lockfile.from_file(build_lockfile_path("no_version"))
-
-      assert expected_lockfile == result
-    end
-  end
-
-  defp build_lockfile_path(filename) do
-    Path.join("lockfiles", "#{filename}.lock")
   end
 end
