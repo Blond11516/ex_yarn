@@ -5,6 +5,8 @@ defmodule ExYarn.ParseError do
   A `ParseError` contains an error message and, if possible, the `ExYarn.Parser.Token` that caused the error.
   """
 
+  alias ExYarn.Token
+
   defexception [:message, :token]
 
   @impl true
@@ -51,21 +53,19 @@ defmodule ExYarn.Parser do
   Receives the lockfile's content as a `String` and returns the parsed map
   representing the lockfile as a `Map` and the list of comments.
   """
-  @spec parse(String.t()) :: {:ok, map(), [String.t()]} | {:error, ParseError.t()}
+  @spec parse(any) :: {:error, Exception.t()} | {:ok, map, [binary]}
   def parse(input) do
-    try do
-      tokens = Token.tokenize(input)
+    tokens = Token.tokenize(input)
 
-      %__MODULE__{result: result, comments: comments} =
-        %__MODULE__{tokens: tokens}
-        |> next()
-        |> do_parse()
+    %__MODULE__{result: result, comments: comments} =
+      %__MODULE__{tokens: tokens}
+      |> next()
+      |> do_parse()
 
-      {:ok, result, comments}
-    catch
-      {:message, message} -> {:error, %ParseError{message: message}}
-      {:message, message, :token, token} -> {:error, %ParseError{message: message, token: token}}
-    end
+    {:ok, result, comments}
+  catch
+    {:message, message} -> {:error, %ParseError{message: message}}
+    {:message, message, :token, token} -> {:error, %ParseError{message: message, token: token}}
   end
 
   @spec next(t()) :: t()
