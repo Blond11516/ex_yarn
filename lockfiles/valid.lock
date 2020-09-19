@@ -1,0 +1,10 @@
+# yarn lockfile v1
+
+dep_name:
+  version "42"
+  resolved npm
+  integrity sha512
+  dependencies:
+    sub_dep "3"
+  optionalDependencies:
+    opt_dep "0"

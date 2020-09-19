@@ -9,6 +9,7 @@ defmodule ExYarn.Lockfile do
   """
 
   alias ExYarn.Lockfile.Dependency
+  alias ExYarn.Parser
 
   @enforce_keys [:version, :dependencies, :comments]
   defstruct [:version, :dependencies, :comments]
@@ -22,7 +23,7 @@ defmodule ExYarn.Lockfile do
           comments: [String.t()]
         }
 
-  @version_regex ~r/^yarn lockfile v(\d+)$/
+  @version_regex ~r/^[ ]?yarn lockfile v(\d+)$/
   @lockfile_version 1
 
   @doc """
@@ -55,6 +56,21 @@ defmodule ExYarn.Lockfile do
     error -> {:error, error}
   end
 
+  @spec from_file!(String.t()) :: ExYarn.Lockfile.t()
+  def from_file!(file_path) do
+    {_, parse_result} = Parser.parse_file!(file_path)
+
+    from_parse_result!(parse_result)
+  end
+
+  @spec from_file(Path.t()) ::
+          {:error, %{:__exception__ => true, :__struct__ => atom, optional(atom) => any}} | {:ok, ExYarn.Lockfile.t()}
+  def from_file(file_path) do
+    {:ok, from_file!(file_path)}
+  rescue
+    e -> {:error, e}
+  end
+
   defp find_version([]) do
     nil
   end
@@ -62,12 +78,9 @@ defmodule ExYarn.Lockfile do
   defp find_version([comment | comments]) do
     matches = Regex.run(@version_regex, comment)
 
-    if length(matches) >= 2 do
-      matches
-      |> Enum.at(1)
-      |> String.to_integer()
-    else
-      find_version(comments)
+    case matches do
+      nil -> find_version(comments)
+      matches -> Enum.at(matches, 1) |> String.to_integer()
     end
   end
 end

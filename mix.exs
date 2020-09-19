@@ -44,8 +44,6 @@ defmodule ExYarn.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:yaml_elixir, "~> 2.5"},
-
       # Dev dependencies
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:credo, "~> 1.4", only: :dev, runtime: false},

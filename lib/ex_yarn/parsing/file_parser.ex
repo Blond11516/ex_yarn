@@ -1,4 +1,4 @@
-defmodule ExYarn.Parser do
+defmodule ExYarn.Parsing.FileParser do
   @moduledoc """
   The library's main module
 
@@ -21,11 +21,11 @@ defmodule ExYarn.Parser do
       ...>  foo 10
       ...>  foobar: barfoo
       ...>)
-      ...> ExYarn.Parser.parse(input)
-      {:ok, {%{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}, [" a comment"]}}
+      ...> ExYarn.parse(input)
+      {:ok, :success, {%{"foo" => %{"bar" => true, "foo" => 10, "foobar" => "barfoo"}}, [" a comment"]}}
   """
 
-  alias ExYarn.Parsing.FileParser
+  alias ExYarn.Parsing.{DependenciesParser, ParseError}
 
   @typedoc """
   The different types of errors that can be returned by `parse/2`
@@ -40,32 +40,39 @@ defmodule ExYarn.Parser do
           | {:error, YamlElixir.ParsingError}
           | {:error, FunctionClauseError}
 
-  @spec parse_file!(String.t()) :: {:ok, {map, [String.t()]}}
-  def parse_file!(file_path) do
-    File.read!(file_path)
-    |> parse!()
-  end
+  @doc """
+  Receives the lockfile's contents, and optionnally the lockfile's name as inputs
+  and returns the parsed result
 
-  @spec parse_file(String.t()) ::
-          {:error, %{:__exception__ => true, :__struct__ => atom, optional(atom) => any}}
-          | {:ok, {map, [String.t()]}}
-  def parse_file(file_path) do
-    parse_file!(file_path)
+  The lockfile's name is used to determine whether to parse the lockfile as an
+  official yarn lockfile (i.e. with yarn's custom format) or as a regular YAML
+  file. The function defaults to parsing the file as a yarn lockfile.
+  """
+  @spec parse(any) ::
+          parsingError()
+          | {:ok, {map(), [String.t()]}}
+  def parse(str) do
+    parse!(str)
   rescue
     e -> {:error, e}
   end
 
-  @spec parse!(String.t()) :: {:ok, {map, [String.t()]}}
-  def parse!(file_content) do
-    FileParser.parse!(file_content)
+  @doc """
+  Receives the lockfile's contents, and optionnally the lockfile's name as inputs
+  and returns the parsed result
+
+  Similar to `parse/2` except it will raise in case of errors.
+  """
+  @spec parse!(String.t()) :: {:ok, {map(), [String.t()]}}
+  def parse!(str) do
+    str = String.replace_prefix(str, "\uFEFF", "")
+
+    parse_file(str)
   end
 
-  @spec parse(String.t()) ::
-          {:error, %{:__exception__ => true, :__struct__ => atom, optional(atom) => any}}
-          | {:ok, {map, [String.t()]}}
-  def parse(file_content) do
-    parse!(file_content)
-  rescue
-    e -> {:error, e}
+  @spec parse_file(String.t()) :: {:ok, {map(), [String.t()]}}
+  defp parse_file(str) do
+    {:ok, result, comments} = DependenciesParser.parse(str)
+    {:ok, {result, Enum.reverse(comments)}}
   end
 end

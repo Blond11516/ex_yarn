@@ -1,4 +1,4 @@
-defmodule ExYarn.Parser.ParseError do
+defmodule ExYarn.Parsing.ParseError do
   @moduledoc """
   Represents an error that has occured while parsing a lockfile.
 

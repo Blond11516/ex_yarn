@@ -1,4 +1,4 @@
-defmodule ExYarn.Parser.Token do
+defmodule ExYarn.Parsing.Token do
   @moduledoc """
   A token is the building block of a lockfile (intended for internal use only)
 
@@ -9,7 +9,7 @@ defmodule ExYarn.Parser.Token do
   and integers to line returns, colons and indentation.
   """
 
-  alias ExYarn.Parser.ParseError
+  alias ExYarn.Parsing.ParseError
 
   @typedoc """
   The list of types a token can have
