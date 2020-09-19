@@ -25,34 +25,23 @@ defmodule ExYarn.Lockfile do
   @version_regex ~r/^[ ]?yarn lockfile v(\d+)$/
   @lockfile_version 1
 
-  @doc """
-  Build a Lockfile from `ExYarn.Parser`'s output. Raises in case of error.
-  """
-  @spec from_parse_result!({map(), [String.t()]}) :: ExYarn.Lockfile.t()
-  def from_parse_result!({map, comments}) do
-    version = find_version(comments)
-
-    if version != nil and version > @lockfile_version do
-      raise "Invalid lockfile version #{version}. Only version <= #{@lockfile_version} is supported"
-    else
-      dependencies =
-        for {name, data} <- map do
-          Dependency.from_result_map(%{name => data})
-        end
-
-      %__MODULE__{version: version, dependencies: dependencies, comments: comments}
-    end
-  end
-
+  @spec from_parse_result({any, maybe_improper_list}) :: {:error, binary} | {:ok, ExYarn.Lockfile.t()}
   @doc """
   Build a Lockfile from `ExYarn.Parser`'s output. Returns errors in a tuple.
   """
-  @spec from_parse_result(any) ::
-          {:error, %{:__exception__ => true, :__struct__ => atom, optional(atom) => any}} | {:ok, ExYarn.Lockfile.t()}
-  def from_parse_result(parse_result) do
-    {:ok, from_parse_result!(parse_result)}
-  rescue
-    error -> {:error, error}
+  def from_parse_result({parsed_map, comments}) do
+    version = find_version(comments)
+
+    if version != nil and version > @lockfile_version do
+      {:error, "Invalid lockfile version #{version}. Only version <= #{@lockfile_version} is supported"}
+    else
+      dependencies =
+        for {name, data} <- parsed_map do
+          Dependency.from_result_map(%{name => data})
+        end
+
+      {:ok, %__MODULE__{version: version, dependencies: dependencies, comments: comments}}
+    end
   end
 
   defp find_version([]) do

@@ -14,10 +14,7 @@ defmodule ExYarn do
     end
   end
 
-  @spec parse_to_lockfile(binary) ::
-          {:error, ParseError.t()}
-          | {:error, %{:__exception__ => true, :__struct__ => atom, optional(atom) => any}}
-          | {:ok, Lockfile.t()}
+  @spec parse_to_lockfile(binary) :: {:error, binary | ParseError.t()} | {:ok, Lockfile.t()}
   def parse_to_lockfile(lockfile_content) do
     case parse(lockfile_content) do
       {:ok, parse_result} -> build_lockfile(parse_result)

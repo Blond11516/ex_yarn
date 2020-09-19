@@ -35,33 +35,6 @@ defmodule LockfileTest do
     comments: [" yarn lockfile v1"]
   }
 
-  describe "from_parse_result!/1" do
-    test "should return a lockfile" do
-      result = Lockfile.from_parse_result!(@parse_result)
-
-      assert @lockfile == result
-    end
-
-    test "given an unsupported lockfile version comment, should raise an error" do
-      {result_map, _} = @parse_result
-      parse_result = {result_map, ["yarn lockfile v2"]}
-
-      assert_raise RuntimeError, fn ->
-        Lockfile.from_parse_result!(parse_result)
-      end
-    end
-
-    test "given no lockfile version comment, should build a lockfile" do
-      {result_map, _} = @parse_result
-      parse_result = {result_map, []}
-      expected_lockfile = %Lockfile{@lockfile | comments: [], version: nil}
-
-      result = Lockfile.from_parse_result!(parse_result)
-
-      assert expected_lockfile == result
-    end
-  end
-
   describe "from_parse_result/1" do
     test "should return a lockfile" do
       {:ok, result} = Lockfile.from_parse_result(@parse_result)
