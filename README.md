@@ -27,4 +27,4 @@ Documentation is generated with [ExDoc](https://github.com/elixir-lang/ex_doc) a
 - [x] Improve code quality (this will obviously be an ongoing goal, but credo should at least run without errors for this to be considered "completed").
 - [ ] Consider using [NimbleParsec](https://hexdocs.pm/nimble_parsec/NimbleParsec.html) to replace the parser for better maintainability and performance.
 - [x] Reorganize module structure (move ExYarn private functions to other modules)
-- [x] Support version 2 of lockfiles
+- [ ] Support version 2 of lockfiles
