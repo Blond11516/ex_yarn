@@ -3,9 +3,7 @@ defmodule ExYarn.Lockfile do
   A small module that wraps `ExYarn.Parser`'s output in an easy to use struct
 
   This module allows parsing a Yarn lockfile into a struct that exposes the
-  file's contents in an easy to use format. This is intended to be used as the
-  main entrypoint for the library, but it also exposes functions for manually
-  building a Lockfile from `ExYarn.Parser`'s output.
+  file's contents in an easy to use format.
   """
 
   alias ExYarn.Dependency
@@ -25,10 +23,10 @@ defmodule ExYarn.Lockfile do
   @version_regex ~r/^[ ]?yarn lockfile v(\d+)$/
   @lockfile_version 1
 
-  @spec from_parse_result({any, maybe_improper_list}) :: {:error, binary} | {:ok, ExYarn.Lockfile.t()}
   @doc """
-  Build a Lockfile from `ExYarn.Parser`'s output. Returns errors in a tuple.
+  Build a Lockfile from `ExYarn.Parser`'s output.
   """
+  @spec from_parse_result({any, maybe_improper_list}) :: {:error, binary} | {:ok, ExYarn.Lockfile.t()}
   def from_parse_result({parsed_map, comments}) do
     version = find_version(comments)
 
